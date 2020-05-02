@@ -29,7 +29,8 @@ export class CrosswordGenerator {
     if (dict.length === 0) throw new Error(`Empty dict`);
 
     this.search = createDictSearcher(this.dict);
-    this.state = this.createInitialState(
+    this.state = this.createInitialState();
+    this.addKeyword(
       this.createKeyword(
         randomSelect(this.search("_____", { exact: true }))[0],
         0,
@@ -40,19 +41,20 @@ export class CrosswordGenerator {
   }
 
   generate(): CrosswordState {
-    while (this.state.failedCount < 3) {
+    while (this.state.failedCount < 1) {
       this.gen();
     }
     return this.state;
   }
 
-  private gen(): void {
-    const failed = () =>
-      void (this.state = {
-        ...this.state,
-        failedCount: this.state.failedCount + 1,
-      });
+  private failed(): void {
+    this.state = {
+      ...this.state,
+      failedCount: this.state.failedCount + 1,
+    };
+  }
 
+  private gen(): void {
     const [pickedKeyword] = randomSelect(this.state.keywords);
     const [crossingWordPicked, crossingIndexPicked] = randomSelect(
       pickedKeyword.answer
@@ -68,23 +70,31 @@ export class CrosswordGenerator {
       .map((_, i) => (i === crossingIndexKeyword ? crossingWordPicked : "_"))
       .join("");
     const [dictEntry] = randomSelect(this.search(query, { exact: true }));
-    if (!dictEntry) return failed();
+    if (!dictEntry) return this.failed();
 
+    const keywordDirection =
+      pickedKeyword.direction === "across" ? "down" : "across";
     const keyword = this.createKeyword(
       dictEntry,
-      crossingCoordinate.x,
-      crossingCoordinate.y - crossingIndexKeyword,
-      pickedKeyword.direction === "across" ? "down" : "across"
+      keywordDirection === "across"
+        ? crossingCoordinate.x - crossingIndexKeyword
+        : crossingCoordinate.x,
+      keywordDirection === "down"
+        ? crossingCoordinate.y - crossingIndexKeyword
+        : crossingCoordinate.y,
+      keywordDirection
     );
 
     // validate keyword
     const isValid = this.getKeywordCoordinates(keyword).every(
       ({ word, x, y }) => {
-        // TODO
-        return Math.random() < 0.95;
+        const kwc = this.state.keywords
+          .flatMap((kw) => this.getKeywordCoordinates(kw))
+          .find((kwc) => kwc.x === x && kwc.y === y);
+        return kwc == null || kwc.word === word;
       }
     );
-    if (!isValid) return failed();
+    if (!isValid) return this.failed();
 
     this.addKeyword(keyword);
   }
@@ -117,7 +127,7 @@ export class CrosswordGenerator {
 
   private addKeyword = (keyword: Keyword): void => {
     let nextState = { ...this.state };
-    let normalizedKeyword = keyword;
+    let normalizedKeyword = { ...keyword };
 
     if (keyword.x < 0) {
       normalizedKeyword.x = 0;
@@ -135,18 +145,28 @@ export class CrosswordGenerator {
         y: k.y - keyword.y,
       }));
     }
+    if (
+      keyword.direction === "across" &&
+      keyword.answer.length > nextState.width
+    ) {
+      nextState.width = keyword.answer.length;
+    }
+    if (
+      keyword.direction === "down" &&
+      keyword.answer.length > nextState.height
+    ) {
+      nextState.height = keyword.answer.length;
+    }
 
-    nextState.keywords = nextState.keywords.concat([normalizedKeyword]);
+    nextState.keywords.push(normalizedKeyword);
     this.state = nextState;
   };
 
-  private createInitialState = (
-    initialKeyword: Keyword
-  ): CrosswordStateInternal => ({
+  private createInitialState = (): CrosswordStateInternal => ({
     failedCount: 0,
     width: 0,
     height: 0,
-    keywords: [initialKeyword],
+    keywords: [],
   });
 }
 
