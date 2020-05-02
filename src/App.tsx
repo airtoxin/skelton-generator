@@ -1,8 +1,14 @@
 import React from "react";
 import logo from "./logo.svg";
 import "./App.css";
+import { loadDict } from "./DictLoader";
+import useAsyncEffect from "use-async-effect";
 
 function App() {
+  useAsyncEffect(async () => {
+    const dict = await loadDict();
+    console.log("@dict", dict);
+  }, []);
   return (
     <div className="App">
       <header className="App-header">
