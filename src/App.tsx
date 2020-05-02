@@ -9,10 +9,9 @@ function App() {
   useAsyncEffect(async () => {
     setDict(await loadDict());
   }, []);
+  const regexp = useMemo(() => new RegExp(query.replace(/_/g, ".")), [query]);
   const entries = useMemo(() => {
-    return query.length < 3
-      ? []
-      : dict.filter((d) => d.reading.includes(query));
+    return query.length < 3 ? [] : dict.filter((d) => regexp.test(d.reading));
   }, [dict, query]);
 
   return (
