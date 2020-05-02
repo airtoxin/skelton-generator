@@ -6,11 +6,12 @@ function kanaToHira(str: string) {
   });
 }
 
-export type Dict = Array<{ heading: string; reading: string; text?: string }>;
+export type Dict = DictEntry[];
+export type DictEntry = { heading: string; reading: string; text: string };
 
-const SpecialHeading1RegExp = new RegExp("^(.*) <(.*)>…$");
-const SpecialHeading2RegExp = new RegExp("^(.*) <(.*)…$");
-const BasicHeadingRegExp = new RegExp("^(.*) <(.*)>$");
+const SpecialHeading1RegExp = new RegExp("^(.*) <(?:[\\d])?(.*)>…$");
+const SpecialHeading2RegExp = new RegExp("^(.*) <(?:[\\d])?(.*)…$");
+const BasicHeadingRegExp = new RegExp("^(.*) <(?:\\[\\d\\])?(.*)>$");
 
 export const loadDict = (): Promise<Dict> =>
   fetch(`${process.env.PUBLIC_URL}/dic.json.gz`)
@@ -29,8 +30,8 @@ export const loadDict = (): Promise<Dict> =>
     .then((json) => {
       const entries: Array<{
         heading: string;
-        text?: string;
-      }> = json.subbooks[0].entries.filter((d: any) => d.heading);
+        text: string;
+      }> = json.subbooks[0].entries.filter((d: any) => d.heading && d.text);
 
       return entries.map((e) => {
         const specialMatch1 = SpecialHeading1RegExp.exec(e.heading);

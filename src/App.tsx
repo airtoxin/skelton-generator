@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Dict, loadDict } from "./DictLoader";
 import useAsyncEffect from "use-async-effect";
 import replaceString from "react-string-replace";
+import { createDictSearcher } from "./CreateDictSearcher";
+import { CrosswordGenerator } from "./CrosswordGenerator";
 
 function App() {
   const [dict, setDict] = useState<Dict>([]);
@@ -9,10 +11,17 @@ function App() {
   useAsyncEffect(async () => {
     setDict(await loadDict());
   }, []);
-  const regexp = useMemo(() => new RegExp(query.replace(/_/g, ".")), [query]);
-  const entries = useMemo(() => {
-    return query.length < 3 ? [] : dict.filter((d) => regexp.test(d.reading));
-  }, [dict, query]);
+  const search = useCallback(createDictSearcher(dict), [dict.length]);
+  const entries = useMemo(() => (query.length >= 3 ? search(query) : []), [
+    search,
+    query,
+  ]);
+
+  useEffect(() => {
+    if (dict.length === 0) return;
+    const result = new CrosswordGenerator(dict).generate();
+    console.log("@result", result);
+  }, [dict]);
 
   return (
     <div className="App">
