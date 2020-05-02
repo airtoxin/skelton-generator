@@ -15,6 +15,7 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-scripts": "3.4.1",
+    "react-string-replace": "^0.4.4",
     "typescript": "3.8.3",
     "use-async-effect": "^2.2.2"
   },

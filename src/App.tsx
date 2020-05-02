@@ -1,30 +1,43 @@
-import React from "react";
-import logo from "./logo.svg";
-import "./App.css";
-import { loadDict } from "./DictLoader";
+import React, { useMemo, useState } from "react";
+import { Dict, loadDict } from "./DictLoader";
 import useAsyncEffect from "use-async-effect";
+import replaceString from "react-string-replace";
 
 function App() {
+  const [dict, setDict] = useState<Dict>([]);
+  const [query, setQuery] = useState<string>("");
   useAsyncEffect(async () => {
-    const dict = await loadDict();
-    console.log("@dict", dict);
+    setDict(await loadDict());
   }, []);
+  const entries = useMemo(() => {
+    return query.length < 3
+      ? []
+      : dict.filter((d) => d.reading.includes(query));
+  }, [dict, query]);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <input
+        type="text"
+        value={query || ""}
+        onChange={(event) => {
+          setQuery(event.target.value);
+        }}
+      />
+
+      {entries.map((e) => (
+        <div key={e.text || e.heading} style={{ margin: "1rem" }}>
+          <div style={{ fontWeight: "bold" }}>
+            {e.heading}
+            <span>(ヨミ: {e.reading})</span>
+          </div>
+          <div>
+            {replaceString(e.text, /\n/, () => (
+              <br />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

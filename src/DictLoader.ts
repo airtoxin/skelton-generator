@@ -1,12 +1,18 @@
 import pako from "pako";
 
+function kanaToHira(str: string) {
+  return str.replace(/[ァ-ン]/g, function (s) {
+    return String.fromCharCode(s.charCodeAt(0) - 0x60);
+  });
+}
+
+export type Dict = Array<{ heading: string; reading: string; text?: string }>;
+
 const SpecialHeading1RegExp = new RegExp("^(.*) <(.*)>…$");
 const SpecialHeading2RegExp = new RegExp("^(.*) <(.*)…$");
 const BasicHeadingRegExp = new RegExp("^(.*) <(.*)>$");
 
-export const loadDict = (): Promise<
-  Array<{ heading: string; reading: string; text?: string }>
-> =>
+export const loadDict = (): Promise<Dict> =>
   fetch(`${process.env.PUBLIC_URL}/dic.json.gz`)
     .then((res) => res.blob())
     .then(
@@ -30,7 +36,7 @@ export const loadDict = (): Promise<
         const specialMatch1 = SpecialHeading1RegExp.exec(e.heading);
         if (specialMatch1) {
           const heading = specialMatch1[1];
-          const reading = specialMatch1[2];
+          const reading = kanaToHira(specialMatch1[2]);
 
           return {
             heading,
@@ -42,7 +48,7 @@ export const loadDict = (): Promise<
         const specialMatch2 = SpecialHeading2RegExp.exec(e.heading);
         if (specialMatch2) {
           const heading = specialMatch2[1];
-          const reading = specialMatch2[2];
+          const reading = kanaToHira(specialMatch2[2]);
 
           return {
             heading,
@@ -54,7 +60,7 @@ export const loadDict = (): Promise<
         const basicMatch = BasicHeadingRegExp.exec(e.heading);
         if (basicMatch) {
           const heading = basicMatch[1];
-          const reading = basicMatch[2];
+          const reading = kanaToHira(basicMatch[2]);
 
           return {
             heading,
