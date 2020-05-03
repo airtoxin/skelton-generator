@@ -5,6 +5,7 @@ export type CrosswordState = {
   width: number;
   height: number;
   keywords: Keyword[];
+  cells: Cell[][];
 };
 
 type CrosswordStateInternal = CrosswordState & {
@@ -196,6 +197,7 @@ export class CrosswordGenerator {
     width: 0,
     height: 0,
     keywords: [],
+    cells: [],
   });
 
   private normalizeCoordinates(): void {
