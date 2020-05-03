@@ -28,10 +28,25 @@ export type Cell = {
   y: number;
 };
 
+type Options = {
+  generationTrialLimit: number;
+  minKeywordLength: number;
+  maxKeywordLength: number;
+};
+
 export class CrosswordGenerator {
+  static DefaultOptions: Options = {
+    generationTrialLimit: 10,
+    minKeywordLength: 3,
+    maxKeywordLength: 14,
+  };
+
   private readonly search: ReturnType<typeof createDictSearcher>;
   private state: CrosswordStateInternal;
-  constructor(private dict: Dict) {
+  constructor(
+    private dict: Dict,
+    private options: Options = CrosswordGenerator.DefaultOptions
+  ) {
     if (dict.length === 0) throw new Error(`Empty dict`);
 
     this.search = createDictSearcher(this.dict);
@@ -68,7 +83,7 @@ export class CrosswordGenerator {
   }
 
   generate(): CrosswordState {
-    while (this.state.failedCount < 1) {
+    while (this.state.failedCount < this.options.generationTrialLimit) {
       this.gen();
     }
     this.normalizeCoordinates();
@@ -83,7 +98,21 @@ export class CrosswordGenerator {
   }
 
   private gen(): void {
-    const [pickedKeyword] = randomSelect(this.state.keywords);
+    // balancing across/down keywords
+    const [acrossCount, downCount] = this.state.keywords.reduce(
+      ([acrossCount, downCount], keyword) => [
+        acrossCount + (keyword.direction === "across" ? 1 : 0),
+        downCount + (keyword.direction === "down" ? 1 : 0),
+      ],
+      [0, 0]
+    );
+    const pickingKeywordDirection =
+      acrossCount >= downCount ? "across" : "down";
+    const [pickedKeyword] = randomSelect(
+      this.state.keywords.filter(
+        (keyword) => keyword.direction === pickingKeywordDirection
+      )
+    );
     const [crossingWordPicked, crossingIndexPicked] = randomSelect(
       pickedKeyword.answer
     );
@@ -92,7 +121,10 @@ export class CrosswordGenerator {
     ];
 
     // select keyword
-    const keywordLength = randomInt(2, 10);
+    const keywordLength = randomInt(
+      this.options.minKeywordLength,
+      this.options.maxKeywordLength
+    );
     const crossingIndexKeyword = randomInt(0, keywordLength); // TODO: or 0
     const query = Array.from(Array(keywordLength))
       .map((_, i) => (i === crossingIndexKeyword ? crossingWordPicked : "_"))
