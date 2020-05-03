@@ -6,6 +6,13 @@ function kanaToHira(str: string) {
   });
 }
 
+function hiraToKana(str: string) {
+  return str.replace(/[ぁ-ん]/g, function (s) {
+    const chr = s.charCodeAt(0) + 0x60;
+    return String.fromCharCode(chr);
+  });
+}
+
 export type Dict = DictEntry[];
 export type DictEntry = { heading: string; reading: string; text: string };
 
@@ -37,7 +44,7 @@ export const loadDict = (): Promise<Dict> =>
         const specialMatch1 = SpecialHeading1RegExp.exec(e.heading);
         if (specialMatch1) {
           const heading = specialMatch1[1];
-          const reading = kanaToHira(specialMatch1[2]);
+          const reading = hiraToKana(specialMatch1[2]);
 
           return {
             heading,
@@ -49,7 +56,7 @@ export const loadDict = (): Promise<Dict> =>
         const specialMatch2 = SpecialHeading2RegExp.exec(e.heading);
         if (specialMatch2) {
           const heading = specialMatch2[1];
-          const reading = kanaToHira(specialMatch2[2]);
+          const reading = hiraToKana(specialMatch2[2]);
 
           return {
             heading,
@@ -61,7 +68,7 @@ export const loadDict = (): Promise<Dict> =>
         const basicMatch = BasicHeadingRegExp.exec(e.heading);
         if (basicMatch) {
           const heading = basicMatch[1];
-          const reading = kanaToHira(basicMatch[2]);
+          const reading = hiraToKana(basicMatch[2]);
 
           return {
             heading,

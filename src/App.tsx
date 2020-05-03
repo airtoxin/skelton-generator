@@ -1,51 +1,58 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Dict, loadDict } from "./DictLoader";
 import useAsyncEffect from "use-async-effect";
-import replaceString from "react-string-replace";
-import { createDictSearcher } from "./CreateDictSearcher";
-import { CrosswordGenerator } from "./CrosswordGenerator";
+import { CrosswordGenerator, CrosswordState } from "./CrosswordGenerator";
 
 function App() {
   const [dict, setDict] = useState<Dict>([]);
-  const [query, setQuery] = useState<string>("");
   useAsyncEffect(async () => {
     setDict(await loadDict());
   }, []);
-  const search = useCallback(createDictSearcher(dict), [dict.length]);
-  const entries = useMemo(() => (query.length >= 3 ? search(query) : []), [
-    search,
-    query,
-  ]);
-
+  const [crossword, setCrossword] = useState<CrosswordState | null>(null);
   useEffect(() => {
     if (dict.length === 0) return;
     const result = new CrosswordGenerator(dict).generate();
-    console.log("@result", result);
+    setCrossword(result);
   }, [dict]);
 
+  console.log("@crossword", crossword);
+  const cells = useMemo(
+    () => crossword && CrosswordGenerator.getCells(crossword),
+    [crossword]
+  );
+
+  if (cells == null) return null;
   return (
     <div className="App">
-      <input
-        type="text"
-        value={query || ""}
-        onChange={(event) => {
-          setQuery(event.target.value);
-        }}
-      />
-
-      {entries.map((e) => (
-        <div key={e.text || e.heading} style={{ margin: "1rem" }}>
-          <div style={{ fontWeight: "bold" }}>
-            {e.heading}
-            <span>(ヨミ: {e.reading})</span>
-          </div>
-          <div>
-            {replaceString(e.text, /\n/, () => (
-              <br />
+      <div>
+        {cells.map((row, i) => (
+          <div key={i} style={{ display: "flex" }}>
+            {row.map((cell) => (
+              <div
+                key={`${cell.x}_${cell.y}`}
+                style={{
+                  display: "flex",
+                  border: "solid 2px black",
+                  fontWeight: "bold",
+                  width: "2rem",
+                  height: "2rem",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  backgroundColor: cell.word || "black",
+                }}
+              >
+                {cell.word}
+              </div>
             ))}
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
+
+      <div>
+        {crossword?.keywords.map((kw) => (
+          <div key={kw.hint}>{kw.answer}</div>
+        ))}
+      </div>
     </div>
   );
 }

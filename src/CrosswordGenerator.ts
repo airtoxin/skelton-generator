@@ -1,7 +1,7 @@
 import { createDictSearcher } from "./CreateDictSearcher";
 import { Dict, DictEntry } from "./DictLoader";
 
-type CrosswordState = {
+export type CrosswordState = {
   width: number;
   height: number;
   keywords: Keyword[];
@@ -11,7 +11,7 @@ type CrosswordStateInternal = CrosswordState & {
   failedCount: number;
 };
 
-type Keyword = {
+export type Keyword = {
   answer: string;
   answerDetail: string;
   hint: string;
@@ -20,7 +20,13 @@ type Keyword = {
   direction: Direction;
 };
 
-type Direction = "across" | "down";
+export type Direction = "across" | "down";
+
+export type Cell = {
+  word?: string;
+  x: number;
+  y: number;
+};
 
 export class CrosswordGenerator {
   private readonly search: ReturnType<typeof createDictSearcher>;
@@ -40,10 +46,32 @@ export class CrosswordGenerator {
     );
   }
 
+  static getCells(state: CrosswordState): Cell[][] {
+    const cells: { word?: string; x: number; y: number }[][] = range(
+      0,
+      state.height
+    ).map((_, y) =>
+      range(0, state.width).map((_, x) => ({
+        x,
+        y,
+      }))
+    );
+
+    for (const keyword of state.keywords) {
+      Array.from(keyword.answer).forEach((word, index) => {
+        const indexY = keyword.y + (keyword.direction === "down" ? index : 0);
+        const indexX = keyword.x + (keyword.direction === "across" ? index : 0);
+        cells[indexY][indexX].word = word;
+      });
+    }
+    return cells;
+  }
+
   generate(): CrosswordState {
     while (this.state.failedCount < 1) {
       this.gen();
     }
+    this.normalizeCoordinates();
     return this.state;
   }
 
@@ -65,7 +93,7 @@ export class CrosswordGenerator {
 
     // select keyword
     const keywordLength = randomInt(2, 10);
-    const crossingIndexKeyword = randomInt(0, keywordLength);
+    const crossingIndexKeyword = randomInt(0, keywordLength); // TODO: or 0
     const query = Array.from(Array(keywordLength))
       .map((_, i) => (i === crossingIndexKeyword ? crossingWordPicked : "_"))
       .join("");
@@ -111,56 +139,25 @@ export class CrosswordGenerator {
     });
   }
 
-  private createKeyword = (
+  private createKeyword(
     entry: DictEntry,
     x: number,
     y: number,
     direction: Direction
-  ): Keyword => ({
-    answer: entry.reading,
-    answerDetail: entry.heading,
-    hint: entry.text.split("\n")[1],
-    x,
-    y,
-    direction,
-  });
+  ): Keyword {
+    return {
+      answer: entry.reading,
+      answerDetail: entry.heading,
+      hint: entry.text,
+      x,
+      y,
+      direction,
+    };
+  }
 
-  private addKeyword = (keyword: Keyword): void => {
-    let nextState = { ...this.state };
-    let normalizedKeyword = { ...keyword };
-
-    if (keyword.x < 0) {
-      normalizedKeyword.x = 0;
-      nextState.width = nextState.width - keyword.x;
-      nextState.keywords = nextState.keywords.map((k) => ({
-        ...k,
-        x: k.x - keyword.x,
-      }));
-    }
-    if (keyword.y < 0) {
-      normalizedKeyword.y = 0;
-      nextState.height = nextState.height - keyword.y;
-      nextState.keywords = nextState.keywords.map((k) => ({
-        ...k,
-        y: k.y - keyword.y,
-      }));
-    }
-    if (
-      keyword.direction === "across" &&
-      keyword.answer.length > nextState.width
-    ) {
-      nextState.width = keyword.answer.length;
-    }
-    if (
-      keyword.direction === "down" &&
-      keyword.answer.length > nextState.height
-    ) {
-      nextState.height = keyword.answer.length;
-    }
-
-    nextState.keywords.push(normalizedKeyword);
-    this.state = nextState;
-  };
+  private addKeyword(keyword: Keyword): void {
+    this.state.keywords.push(keyword);
+  }
 
   private createInitialState = (): CrosswordStateInternal => ({
     failedCount: 0,
@@ -168,6 +165,34 @@ export class CrosswordGenerator {
     height: 0,
     keywords: [],
   });
+
+  private normalizeCoordinates(): void {
+    const { minX, minY, maxX, maxY } = this.state.keywords
+      .flatMap(this.getKeywordCoordinates)
+      .reduce(
+        ({ minX, minY, maxX, maxY }, { x, y }) => ({
+          minX: Math.min(minX, x),
+          minY: Math.min(minY, y),
+          maxX: Math.max(maxX, x),
+          maxY: Math.max(maxY, y),
+        }),
+        {
+          minX: Number.MAX_SAFE_INTEGER,
+          minY: Number.MAX_SAFE_INTEGER,
+          maxX: Number.MIN_SAFE_INTEGER,
+          maxY: Number.MIN_SAFE_INTEGER,
+        }
+      );
+    const [offsetX, offsetY] = [-minX, -minY];
+
+    this.state.keywords = this.state.keywords.map((keyword) => ({
+      ...keyword,
+      x: keyword.x + offsetX,
+      y: keyword.y + offsetY,
+    }));
+    this.state.width = maxX - minX + 1;
+    this.state.height = maxY - minY + 1;
+  }
 }
 
 const randomInt = (min: number, max: number): number =>
@@ -177,3 +202,6 @@ const randomSelect = <T>(list: ArrayLike<T>): [T, number] => {
   const index = randomInt(0, list.length - 1);
   return [list[index], index];
 };
+
+const range = (min: number, max: number) =>
+  Array.from(Array(max - min)).map((_, i) => min + i);
