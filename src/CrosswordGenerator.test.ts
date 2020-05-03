@@ -96,36 +96,28 @@ describe("CrosswordGenerator", () => {
       const { generator, dictEntryKeyword } = createDefaultContext();
       const negativeCoordinateKeyword = { ...dictEntryKeyword, x: 10, y: 20 };
 
-      // initial state of width/height
-      expect(generator["state"].width).toBe(0);
-      expect(generator["state"].height).toBe(0);
-
       generator["state"].keywords.push(negativeCoordinateKeyword);
       generator["normalizeCoordinates"]();
 
       // corrected state of width/height
       expect(generator["state"].width).toBe(
-        10 + (negativeCoordinateKeyword.answer.length - 1)
+        10 + negativeCoordinateKeyword.answer.length
       );
-      expect(generator["state"].height).toBe(20);
+      expect(generator["state"].height).toBe(20 + 1);
     });
 
     it("should correct width and height with keyword having negative coordinate", () => {
       const { generator, dictEntryKeyword } = createDefaultContext();
       const negativeCoordinateKeyword = { ...dictEntryKeyword, x: -10, y: -20 };
 
-      // initial state of width/height
-      expect(generator["state"].width).toBe(0);
-      expect(generator["state"].height).toBe(0);
-
       generator["state"].keywords.push(negativeCoordinateKeyword);
       generator["normalizeCoordinates"]();
 
       // corrected state of width/height
       expect(generator["state"].width).toBe(
-        10 + (negativeCoordinateKeyword.answer.length - 1)
+        10 + negativeCoordinateKeyword.answer.length
       );
-      expect(generator["state"].height).toBe(20);
+      expect(generator["state"].height).toBe(20 + 1);
     });
   });
 
